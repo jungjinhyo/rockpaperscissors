@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QXmlStreamReader>
 
-const QString CURRENT_VERSION = "1.00";  // 현재 버전
+const QString CURRENT_VERSION = "1.04";  // 현재 버전, RockPaperScissors.exe 실행 시 latest에 저장된 Updates와 비교함. 항상 갱신하기
 const QString UPDATES_URL = "https://jungjinhyo.github.io/rockpaperscissors-installer/latest/repository/Updates.xml";  // 업데이트 XML 경로
 
 MainWindow::MainWindow(QWidget *parent)
