@@ -1,22 +1,12 @@
-#include <QCoreApplication>
-#include "version_manager.h"
-#include <QDebug>
-
-const QString CURRENT_VERSION = "v1.0.1";
+#include <QApplication>
+#include "download_manager.h"
 
 int main(int argc, char *argv[]) {
-    QCoreApplication app(argc, argv);
+    QApplication app(argc, argv);
 
-    QString latest_version = findLatestVersion();
-    qDebug() << "Latest version: " << latest_version;
-
-    int comparison = compareVersions(latest_version, CURRENT_VERSION);
-    if (comparison > 0) {
-        qDebug() << "A new version is available! Downloading...";
-        // 여기에 다운로드 및 설치 함수 호출 가능
-    } else {
-        qDebug() << "You are already using the latest version.";
-    }
+    Downloader downloader;
+    downloader.setFileName("RockPaperScissorsOnlineInstaller_v2.0.0.exe");
+    downloader.startDownload(QUrl("https://jungjinhyo.github.io/rockpaperscissors-installer/v1.1.0/RockPaperScissorsOnlineInstaller.exe"));
 
     return app.exec();
 }
