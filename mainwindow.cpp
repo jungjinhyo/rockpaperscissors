@@ -8,8 +8,9 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QProcess>
-#include <QStandardPaths>  // QStandardPaths 사용을 위한 헤더 파일
-#include <QFile>  // QFile 사용을 위한 헤더 파일
+#include <QStandardPaths>
+#include <QFile>
+#include <QDebug>  // 디버깅 메시지 출력을 위한 헤더 파일
 
 const QString CURRENT_VERSION = "1.04";  // 현재 버전
 const QString UPDATES_URL = "https://jungjinhyo.github.io/rockpaperscissors-installer/latest/repository/Updates.xml";  // 업데이트 XML 경로
@@ -20,25 +21,36 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    networkManager = new QNetworkAccessManager(this);  // 네트워크 관리 객체 생성
+    networkManager = new QNetworkAccessManager(this);
 
-    // 네트워크 요청 완료 시 onUpdateCheckFinished 호출
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateCheckFinished);
 
-    // 프로그램 시작 시 최신 버전 확인
-    checkForUpdates();
+    checkForUpdates();  // 프로그램 시작 시 최신 버전 확인
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
+}
+
+// 버전 비교 함수: 최신 버전인지 확인
+bool MainWindow::isVersionNewer(const QString &current, const QString &latest) {
+    QStringList currentParts = current.split('.');
+    QStringList latestParts = latest.split('.');
+
+    for (int i = 0; i < std::max(currentParts.size(), latestParts.size()); ++i) {
+        int currentPart = (i < currentParts.size()) ? currentParts[i].toInt() : 0;
+        int latestPart = (i < latestParts.size()) ? latestParts[i].toInt() : 0;
+
+        if (latestPart > currentPart) return true;
+        if (currentPart > latestPart) return false;
+    }
+    return false;  // 동일한 버전인 경우
 }
 
 void MainWindow::downloadAndInstallUpdate() {
     QUrl url(INSTALLER_URL);
     QNetworkRequest request(url);
 
-    // 네트워크 요청 완료 시 onDownloadFinished 호출
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onDownloadFinished);
 
     networkManager->get(request);  // 설치 파일 다운로드 시작
@@ -46,15 +58,22 @@ void MainWindow::downloadAndInstallUpdate() {
 
 void MainWindow::onDownloadFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        // 임시 파일 경로에 다운로드된 파일 저장
-        QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/installer.exe";
+        QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/RockPaperScissorsOnlineInstaller.exe";
         QFile file(tempPath);
         if (file.open(QIODevice::WriteOnly)) {
             file.write(reply->readAll());
             file.close();
 
-            // 설치 파일 실행
-            QProcess::startDetached(tempPath);  // installer.exe 실행
+            // 디버깅 메시지로 경로 출력
+            qDebug() << "Installer saved at:" << tempPath;
+
+            bool started = QProcess::startDetached(tempPath);  // 설치 파일 실행
+            if (started) {
+                qDebug() << "Installer started successfully.";
+            } else {
+                qDebug() << "Failed to start installer.";
+            }
+
             QApplication::quit();  // 기존 프로그램 종료
         } else {
             QMessageBox::warning(this, "Error", "Failed to save the installer.");
@@ -78,7 +97,9 @@ void MainWindow::onUpdateCheckFinished(QNetworkReply *reply) {
 
         QString latestVersion;
 
-        // XML 파싱을 통해 최신 버전 정보 추출
+        // XML 파싱 과정 디버깅 메시지
+        qDebug() << "XML Response:" << response;
+
         while (!xml.atEnd() && !xml.hasError()) {
             xml.readNext();
             if (xml.name().toString() == QStringLiteral("ApplicationVersion") && xml.isStartElement()) {
@@ -87,27 +108,30 @@ void MainWindow::onUpdateCheckFinished(QNetworkReply *reply) {
             }
         }
 
-        // 최신 버전과 현재 버전 비교
-        if (latestVersion > CURRENT_VERSION) {
-            QMessageBox::StandardButton reply =
+        // 최신 버전 정보 디버깅 메시지
+        qDebug() << "Current Version:" << CURRENT_VERSION;
+        qDebug() << "Latest Version:" << latestVersion;
+
+        if (isVersionNewer(CURRENT_VERSION, latestVersion)) {
+            QMessageBox::StandardButton result =
                 QMessageBox::question(this, "Update Available",
                                       "A new version (" + latestVersion + ") is available. "
                                                                           "Would you like to update now?",
                                       QMessageBox::Yes | QMessageBox::No);
-            if (reply == QMessageBox::Yes) {
+            if (result == QMessageBox::Yes) {
                 downloadAndInstallUpdate();  // 업데이트 다운로드 및 설치 시작
-            } else {
-                QMessageBox::information(this, "Up to Date", "You are using the latest version.");
+                return;  // 이후 코드 실행 방지
             }
-        } else {
-            QMessageBox::information(this, "Up to Date", "You are using the latest version.");
         }
+
+        QMessageBox::information(this, "Up to Date", "You are using the latest version.");
     } else {
         QMessageBox::warning(this, "Error", "Failed to check for updates.");
     }
     reply->deleteLater();  // 응답 객체 해제
 }
 
+// 게임 로직 구현
 QString MainWindow::computerChoice() {
     auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     std::mt19937 generator(seed);
@@ -133,7 +157,7 @@ void MainWindow::playGame(const QString &playerChoice) {
     QString compChoice = computerChoice();
     QString result = determineWinner(playerChoice, compChoice);
 
-    QString message = QStringLiteral("Your chose: %1\nComputer chose: %2\n%3")
+    QString message = QStringLiteral("You chose: %1\nComputer chose: %2\n%3")
                           .arg(playerChoice, compChoice, result);
 
     ui->lblResult->setText(message);
