@@ -10,12 +10,82 @@
 #include <QTextStream>
 #include <QByteArray>
 #include <QDateTime>
+#include <QEventLoop>
+#include <QRegularExpression>
+#include <QRegularExpressionMatchIterator>
+#include <algorithm>
+#include <QDebug>
 
-// Base64 인코딩 함수
-QByteArray base64EncodeJson(const QJsonDocument& jsonDoc) {
-    QByteArray jsonData = jsonDoc.toJson();
-    return jsonData.toBase64();
+// 버전 비교 함수
+int compareVersions(const QString &v1, const QString &v2) {
+    QStringList v1_parts = v1.mid(1).split('.');
+    QStringList v2_parts = v2.mid(1).split('.');
+
+    for (int i = 0; i < v1_parts.size() && i < v2_parts.size(); ++i) {
+        int num1 = v1_parts[i].toInt();
+        int num2 = v2_parts[i].toInt();
+
+        if (num1 > num2) return 1;
+        if (num1 < num2) return -1;
+    }
+    return 0;
 }
+
+// 최신 버전 찾기 함수
+QString findLatestVersion() {
+    QNetworkAccessManager manager;
+    QNetworkRequest request(QUrl("https://api.github.com/repos/jungjinhyo/rockpaperscissors-installer/contents/version.json"));
+    QNetworkReply* reply = manager.get(request);
+
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    QString latest_version;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray response = reply->readAll();
+        //qDebug() << "Raw API Response:" << response;  // 응답 디버깅
+
+        // JSON 파싱
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
+        if (!jsonDoc.isObject()) {
+            qWarning() << "Failed to parse JSON response.";
+            reply->deleteLater();
+            return latest_version;
+        }
+
+        QJsonObject jsonObj = jsonDoc.object();
+        QByteArray content = QByteArray::fromBase64(jsonObj["content"].toString().toUtf8());
+        QJsonDocument contentDoc = QJsonDocument::fromJson(content);
+
+        if (!contentDoc.isArray()) {
+            qWarning() << "version.json content is not an array.";
+            reply->deleteLater();
+            return latest_version;
+        }
+
+        QJsonArray versions = contentDoc.array();
+        QStringList versionList;
+        for (const QJsonValue &value : versions) {
+            versionList << value.toObject()["version"].toString();
+        }
+
+        std::sort(versionList.begin(), versionList.end(), [](const QString &a, const QString &b) {
+            return a > b;
+        });
+
+        if (!versionList.isEmpty()) {
+            latest_version = versionList.first();
+        }
+    } else {
+        qWarning() << "Failed to fetch updates:" << reply->errorString();
+    }
+
+    reply->deleteLater();
+    return latest_version;
+}
+
 
 // GitHub Personal Access Token (PAT) 불러오기
 QString loadTokenFromFile(const QString& filePath) {
@@ -30,85 +100,32 @@ QString loadTokenFromFile(const QString& filePath) {
     return token;
 }
 
-// 기존 파일의 sha 값 가져오기
-QString fetchShaForExistingFile(const QString& token, const QString& url) {
-    QNetworkAccessManager manager;
-    QNetworkRequest request(QUrl("https://api.github.com/repos/jungjinhyo/rockpaperscissors-installer/contents/version.json"));
-    request.setRawHeader("Authorization", "token " + token.toUtf8());
-
-    QNetworkReply* reply = manager.get(request);
-    while (!reply->isFinished()) {
-        qApp->processEvents();  // 이벤트 루프 유지
-    }
-
-    QString sha;
-    if (reply->error() == QNetworkReply::NoError) {
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(reply->readAll());
-        sha = jsonDoc.object()["sha"].toString();
-        if (sha.isEmpty()) {
-            qCritical() << "SHA value not found!";
-        } else {
-            qDebug() << "Fetched sha:" << sha;
-        }
-    } else {
-        qCritical() << "Failed to fetch sha:" << reply->errorString();
-    }
-    reply->deleteLater();
-    return sha;
-}
-
 // 버전 정보 업로드 함수
 void uploadVersionJson(const QString& token, const QString current_version) {
     QNetworkAccessManager* manager = new QNetworkAccessManager();
-
-    // 요청 URL 설정
     QUrl url("https://api.github.com/repos/jungjinhyo/rockpaperscissors-installer/contents/version.json");
     QNetworkRequest request(url);
 
-    // 헤더 설정
     request.setRawHeader("Authorization", "token " + token.toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // 기존 버전 정보 가져오기
     QJsonArray versions;
-    QString sha = fetchShaForExistingFile(token, url.toString());
+    QString sha = findLatestVersion();
     if (!sha.isEmpty()) {
-        QNetworkReply* reply = manager->get(request);
-        while (!reply->isFinished()) {
-            qApp->processEvents();
-        }
-        if (reply->error() == QNetworkReply::NoError) {
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(reply->readAll());
-            QByteArray content = QByteArray::fromBase64(jsonDoc.object()["content"].toString().toUtf8());
-            QJsonDocument existingDoc = QJsonDocument::fromJson(content);
-            versions = existingDoc.array();
-        }
-        reply->deleteLater();
+        versions.append(current_version);
     }
 
-    // 새로운 버전 정보 추가
-    QJsonObject newVersion;
-    newVersion["version"] = current_version;
-    newVersion["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-    versions.append(newVersion);
-
-    // JSON 데이터 생성 및 인코딩
     QJsonDocument updatedDoc(versions);
-    QByteArray encodedContent = base64EncodeJson(updatedDoc);
+    QByteArray encodedContent = updatedDoc.toJson().toBase64();
 
-    // 요청 본문 생성
     QJsonObject requestData;
     requestData["message"] = "Add new version";
     requestData["content"] = QString(encodedContent);
     requestData["branch"] = "main";
-    if (!sha.isEmpty()) {
-        requestData["sha"] = sha;
-    }
 
     QJsonDocument requestDoc(requestData);
     QByteArray requestBody = requestDoc.toJson();
 
-    // PUT 요청 전송
     QNetworkReply* reply = manager->put(request, requestBody);
 
     QObject::connect(reply, &QNetworkReply::finished, [reply]() {
