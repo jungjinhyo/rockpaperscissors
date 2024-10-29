@@ -8,9 +8,10 @@
 #include <QDebug>
 #include <QRegularExpression>
 #include <QStringList>
+#include <QDir>  // 디렉터리 생성용
 #include "mainwindow.h"  // 가위바위보 게임 메인 창 헤더 포함
 
-const QString CURRENT_VERSION = "v1.0.5"; // "v7.5.12" 타입으로 입력하기 코드 변경 시 꼭 업뎃!
+const QString CURRENT_VERSION = "v1.1.0"; // "v7.5.12" 타입으로 입력하기 코드 변경 시 꼭 수정하기
 const QString UPDATES_URL = "https://jungjinhyo.github.io/rockpaperscissors-installer/";
 
 // 버전 비교 함수
@@ -68,7 +69,15 @@ QString findLatestVersion() {
 // 설치 파일 다운로드 및 실행 함수
 void downloadAndRunInstaller(const QString &latest_version) {
     const QString installer_url = UPDATES_URL + latest_version + "/RockPaperScissorsOnlineInstaller.exe";
-    const QString download_path = "RockPaperScissorsOnlineInstaller.exe";
+
+    // installer 디렉터리 생성
+    QDir dir;
+    if (!dir.exists("installer")) {
+        dir.mkdir("installer");
+    }
+
+    // installer 폴더에 다운로드 경로 설정
+    const QString download_path = "installer/RockPaperScissorsOnlineInstaller.exe";
 
     QNetworkAccessManager manager;
     QNetworkReply *reply = manager.get(QNetworkRequest(QUrl(installer_url)));

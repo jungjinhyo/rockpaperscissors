@@ -29,7 +29,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Choose Your move 1.0.5</string>
+     <string>Choose Your move 1.1.0</string>
     </property>
    </widget>
    <widget class="QPushButton" name="btnRock">
