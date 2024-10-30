@@ -26,6 +26,8 @@ Downloader::Downloader(QWidget *parent)
     layout->addWidget(m_timeLabel);
     setLayout(layout);
 
+    QMessageBox::information(this, tr("Latest Version is existed"), tr("Your current version is not the latest. Starting download of the latest version."));
+
     // "install" 디렉터리 생성
     QDir dir("installer");
     if (!dir.exists()) {
