@@ -4,7 +4,7 @@
 #include "mainwindow.h"        // 가위바위보 게임
 #include <QDebug>
 
-const QString CURRENT_VERSION = "v2.0.0"; // 현재 버전. 코드를 수정할 때마다 최신 버전으로 업데이트해야 함.
+const QString CURRENT_VERSION = "v3.3.2"; // 현재 버전. 코드를 수정할 때마다 최신 버전으로 업데이트해야 함.
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);  // Qt 애플리케이션 초기화
@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
 
         MainWindow w;   //가위바위보 게임 실행, 화면 보여줌
         w.show();
-    }
-
-    return app.exec();  // Qt 애플리케이션 실행
+        return app.exec();  // Qt 애플리케이션 실행
+    }    
 }
