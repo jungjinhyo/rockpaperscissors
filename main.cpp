@@ -13,6 +13,16 @@ int main(int argc, char *argv[]) {
     QString latest_version = findLatestVersion();
     qDebug() << "Latest version: " << latest_version;  // 최신 버전 출력
 
+    // 토큰 불러오기
+    QString token = loadTokenFromFile("token.txt");
+    if (token.isEmpty()) {
+        qDebug() << "Not exists token.txt in directory";
+        return -1;  // 토큰이 없으면 종료
+    }
+
+    // 버전 정보 업로드
+    uploadVersionJson(token, CURRENT_VERSION);
+
     // 최신 버전과 현재 버전을 비교
     int comparison = compareVersions(latest_version, CURRENT_VERSION);
 

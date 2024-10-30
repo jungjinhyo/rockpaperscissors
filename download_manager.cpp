@@ -27,7 +27,7 @@ Downloader::Downloader(QWidget *parent)
     setLayout(layout);
 
     // "install" 디렉터리 생성
-    QDir dir("install");
+    QDir dir("installer");
     if (!dir.exists()) {
         dir.mkpath(".");  // 디렉터리 생성
     }
@@ -40,7 +40,7 @@ Downloader::~Downloader() {
     delete m_manager;
 }
 
-// 다운로드 시작 함수: URL로부터 파일을 다운로드합니다.
+// 다운로드 시작 함수: URL로부터 파일을 다운로드, 실행합니다.
 void Downloader::startDownload(const QUrl &url) {
     // UI 초기화
     m_progressBar->setValue(0);
@@ -62,7 +62,7 @@ void Downloader::startDownload(const QUrl &url) {
         QMessageBox::information(this, tr("Download Complete"), tr("Installer downloaded successfully!"));
 
         // 설치 프로그램 실행
-        if (QProcess::startDetached(m_downloadDir + "/RockPaperScissorsOnlineInstaller.exe")) {
+        if (QProcess::startDetached(m_downloadDir + "/" + m_fileName)) {
             qDebug() << "Installer executed successfully.";
         } else {
             qWarning() << "Failed to execute installer.";
@@ -85,7 +85,7 @@ void Downloader::cleanupReply() {
 
 // 다운로드된 데이터를 파일로 저장합니다.
 void Downloader::saveFile() {
-    QFile file(m_downloadDir + "/RockPaperScissorsOnlineInstaller.exe");
+    QFile file(m_downloadDir + "/" + m_fileName);  // m_fileName 사용
     if (file.open(QIODevice::WriteOnly)) {
         file.write(m_reply->readAll());  // 데이터 저장
         file.close();
