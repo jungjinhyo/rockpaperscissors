@@ -7,6 +7,12 @@
 #include <QProgressBar>
 #include <QLabel>
 #include <QString>
+#include <QCoreApplication>
+
+namespace Ui
+{
+class Downloader;
+}
 
 // 설치 파일을 다운로드하고 실행하는 클래스입니다.
 class Downloader : public QWidget {
@@ -28,6 +34,7 @@ private:
     void saveFile();  // 파일 저장
     void handleError(QNetworkReply::NetworkError error);  // 오류 처리
     void calculateTimeRemaining(qint64 received, qint64 total);  // 남은 시간 계산
+    void calculateSizes(qint64 received, qint64 total); // 용량 계산
 
     QNetworkAccessManager *m_manager;  // 네트워크 매니저
     QNetworkReply *m_reply;  // 네트워크 응답 객체

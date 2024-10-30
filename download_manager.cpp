@@ -45,6 +45,7 @@ Downloader::~Downloader() {
 // 다운로드 시작 함수: URL로부터 파일을 다운로드, 실행합니다.
 void Downloader::startDownload(const QUrl &url) {
     // UI 초기화
+    m_startTime = QDateTime::currentDateTime().toSecsSinceEpoch();  // 시작 시간 초기화
     m_progressBar->setValue(0);
     m_downloadLabel->setText(tr("Downloading updates..."));
     m_timeLabel->setText(tr("Time remaining: Unknown"));
@@ -52,6 +53,12 @@ void Downloader::startDownload(const QUrl &url) {
     // 네트워크 요청 생성
     QNetworkRequest request(url);
     m_reply = m_manager->get(request);
+
+    showNormal();  // 창을 활성화합니다.
+
+    bool connected = connect(m_reply, &QNetworkReply::downloadProgress,
+                             this, &Downloader::updateProgress);
+    qDebug() << "downloadProgress connected:" << connected;
 
     // 이벤트 루프를 사용해 다운로드 완료까지 대기
     QEventLoop loop;
@@ -128,14 +135,49 @@ void Downloader::calculateTimeRemaining(qint64 received, qint64 total) {
     }
 }
 
-// 다운로드 진행 상황 업데이트 함수
 void Downloader::updateProgress(qint64 received, qint64 total) {
     if (total > 0) {
+        m_progressBar->setMinimum(0);
         m_progressBar->setMaximum(100);
         m_progressBar->setValue((received * 100) / total);  // 진행률 계산
-        calculateTimeRemaining(received, total);  // 남은 시간 계산
+
+        // 다운로드 크기 및 남은 시간 계산
+        calculateSizes(received, total);
+        calculateTimeRemaining(received, total);
+
+        // UI 강제 갱신
+        QCoreApplication::processEvents();
+    } else {
+        m_progressBar->setMinimum(0);
+        m_progressBar->setMaximum(0);
+        m_progressBar->setValue(-1);
+        m_downloadLabel->setText(tr("Downloading Updates..."));
+        m_timeLabel->setText(QString("%1: %2").arg(tr("Time Remaining")).arg(tr("Unknown")));
     }
 }
+
+void Downloader::calculateSizes(qint64 received, qint64 total) {
+    QString totalSize;
+    QString receivedSize;
+
+    if (total < 1024)
+        totalSize = tr("%1 bytes").arg(total);
+    else if (total < 1048576)
+        totalSize = tr("%1 KB").arg(total / 1024);
+    else
+        totalSize = tr("%1 MB").arg(total / 1048576);
+
+    if (received < 1024)
+        receivedSize = tr("%1 bytes").arg(received);
+    else if (received < 1048576)
+        receivedSize = tr("%1 KB").arg(received / 1024);
+    else
+        receivedSize = tr("%1 MB").arg(received / 1048576);
+
+    m_downloadLabel->setText(tr("Downloading updates") +
+                             " (" + receivedSize + " " + tr("of") + " " + totalSize + ")");
+}
+
 
 // 다운로드 완료 시 호출되는 함수
 void Downloader::finished() {
