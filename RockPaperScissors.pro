@@ -11,11 +11,13 @@ CONFIG += c++17
 SOURCES += \
     download_manager.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    version_manager.cpp
 
 HEADERS += \
     download_manager.h \
-    mainwindow.h
+    mainwindow.h \
+    version_manager.h
 
 FORMS += \
     mainwindow.ui
