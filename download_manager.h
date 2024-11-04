@@ -8,6 +8,8 @@
 #include <QLabel>
 #include <QString>
 #include <QCoreApplication>
+#include <QFileInfo>
+#include <QProcess>
 
 namespace Ui
 {

@@ -1,34 +1,30 @@
 #include "version_manager.h"
-#include <QCoreApplication>
+#include <QFileInfo>
+#include <QProcess>
 #include <QNetworkAccessManager>
-#include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QFile>
+#include <QCoreApplication>
+#include <QEventLoop>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
-#include <QTextStream>
-#include <QByteArray>
-#include <QDateTime>
-#include <QEventLoop>
-#include <QRegularExpression>
-#include <QRegularExpressionMatchIterator>
-#include <algorithm>
 #include <QDebug>
+#include <QJsonArray>
 
 // 버전 비교 함수
 int compareVersions(const QString &v1, const QString &v2) {
-    QStringList v1_parts = v1.mid(1).split('.');
+    QStringList v1_parts = v1.mid(1).split('.');  // "v" 제거 후 '.'으로 나눔
     QStringList v2_parts = v2.mid(1).split('.');
 
-    for (int i = 0; i < v1_parts.size() && i < v2_parts.size(); ++i) {
-        int num1 = v1_parts[i].toInt();
-        int num2 = v2_parts[i].toInt();
+    int maxLength = qMax(v1_parts.size(), v2_parts.size());
 
-        if (num1 > num2) return 1;
-        if (num1 < num2) return -1;
+    for (int i = 0; i < maxLength; ++i) {
+        int num1 = (i < v1_parts.size()) ? v1_parts[i].toInt() : 0;
+        int num2 = (i < v2_parts.size()) ? v2_parts[i].toInt() : 0;
+
+        if (num1 > num2) return 1;  // v1이 더 큼
+        if (num1 < num2) return -1; // v2가 더 큼
     }
-    return 0;
+    return 0;  // 두 버전이 동일
 }
 
 // 최신 버전 찾기 함수
@@ -93,7 +89,7 @@ QByteArray base64EncodeJson(const QJsonDocument& jsonDoc) {
     return jsonData.toBase64();
 }
 
-// GitHub Personal Access Token (PAT) 불러오기
+// GitHub Personal Access Token (PAT) 불러오기, 토큰 로드 함수
 QString loadTokenFromFile(const QString& filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -105,6 +101,7 @@ QString loadTokenFromFile(const QString& filePath) {
     file.close();
     return token;
 }
+
 
 // 기존 파일의 sha 값 가져오기
 QString fetchShaForExistingFile(const QString& token, const QString& url) {
@@ -197,3 +194,46 @@ void uploadVersionJson(const QString& token, const QString current_version) {
         reply->deleteLater();
     });
 }
+
+// 버전 확인 및 런처 실행 함수
+void checkForUpdate(const QString &currentVersion) {
+    QFileInfo exeFileInfo(QCoreApplication::applicationFilePath());
+    QString exePath = exeFileInfo.absolutePath();
+
+    if (exePath.contains("build-")) {
+        QString token = loadTokenFromFile("token.txt");
+        if (token.isEmpty()) {
+            qDebug() << "Token file not found or empty.";
+            return;
+        }
+
+        uploadVersionJson(token, currentVersion);
+        qDebug() << "Version uploaded: " << currentVersion;
+    }
+
+    QString latestVersion = findLatestVersion();
+    qDebug() << "Latest version: " << latestVersion;
+    qDebug() << "Current Version: " << currentVersion;
+
+    int comparison = compareVersions(latestVersion, currentVersion);
+    if (comparison > 0) {
+        qDebug() << "A new version is available! Launching update...";
+
+        QString launcherPath = QCoreApplication::applicationDirPath() + "/updater/UpdaterLauncher.exe";
+        qDebug() << "Launcher path:" << launcherPath;
+
+        bool result = QProcess::startDetached(launcherPath, QStringList() << latestVersion);
+        if (!result) {
+            qCritical() << "Failed to start UpdaterLauncher.";
+        } else {
+            qDebug() << "UpdaterLauncher started successfully.";
+        }
+
+        // 프로그램 종료
+        qApp->quit();
+        return;  // 종료 후 추가 실행 방지
+    } else {
+        qDebug() << "You are already using the latest version.";
+    }
+}
+
