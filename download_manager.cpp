@@ -18,7 +18,7 @@ Downloader::Downloader(QWidget *parent)
     // UI 설정
     m_progressBar = new QProgressBar(this);
     m_timeLabel = new QLabel(tr("Time remaining: Unknown"), this);
-    m_downloadLabel = new QLabel(tr("Downloading updates..."), this);
+    m_downloadLabel = new QLabel(tr("Downloading udates..."), this);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(m_downloadLabel);

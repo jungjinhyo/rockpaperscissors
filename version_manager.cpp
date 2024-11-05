@@ -106,7 +106,7 @@ QString loadTokenFromFile(const QString& filePath) {
 // 기존 파일의 sha 값 가져오기
 QString fetchShaForExistingFile(const QString& token, const QString& url) {
     QNetworkAccessManager manager;
-    QNetworkRequest request(QUrl("https://api.github.com/repos/jungjinhyo/rockpaperscissors-installer/contents/version.json"));
+    QNetworkRequest request((QUrl(url)));  // 괄호 명시적으로 추가
     request.setRawHeader("Authorization", "token " + token.toUtf8());
 
     QNetworkReply* reply = manager.get(request);
@@ -230,7 +230,7 @@ void checkForUpdate(const QString &currentVersion) {
         }
 
         // 프로그램 종료
-        qApp->quit();
+        QCoreApplication::exit(0);
         return;  // 종료 후 추가 실행 방지
     } else {
         qDebug() << "You are already using the latest version.";
