@@ -2,6 +2,8 @@
 #define VERSION_MANAGER_H
 
 #include <QString>
+#include <QTimer>
+#include <QApplication>
 
 int compareVersions(const QString &v1, const QString &v2);
 QString findLatestVersion();

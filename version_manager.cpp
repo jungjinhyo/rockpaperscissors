@@ -9,6 +9,9 @@
 #include <QJsonObject>
 #include <QDebug>
 #include <QJsonArray>
+#include <QTimer>
+#include <QApplication>
+
 
 // 버전 비교 함수
 int compareVersions(const QString &v1, const QString &v2) {
@@ -230,6 +233,11 @@ void checkForUpdate(const QString &currentVersion) {
                 qCritical() << "Failed to start UpdaterLauncher at:" << launcherPath;
             } else {
                 qDebug() << "UpdaterLauncher started successfully with version:" << latestVersion;
+
+                // RockPaperScissors.exe를 강제로 종료하는 타이머 설정 (3초 뒤 종료)
+                QTimer::singleShot(1000, []() {
+                    QApplication::exit(0);
+                });
             }
         } else {
             qCritical() << "UpdaterLauncher not found at:" << launcherPath;
