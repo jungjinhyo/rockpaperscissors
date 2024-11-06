@@ -1,6 +1,5 @@
 #include <QApplication>
 #include <QFileInfo>
-#include "download_manager.h"
 #include "version_manager.h"
 #include "mainwindow.h"
 #include <QDebug>

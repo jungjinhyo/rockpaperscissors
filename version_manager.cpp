@@ -222,11 +222,17 @@ void checkForUpdate(const QString &currentVersion) {
         QString launcherPath = QCoreApplication::applicationDirPath() + "/updater/UpdaterLauncher.exe";
         qDebug() << "Launcher path:" << launcherPath;
 
-        bool result = QProcess::startDetached(launcherPath, QStringList() << latestVersion);
-        if (!result) {
-            qCritical() << "Failed to start UpdaterLauncher.";
+        // UpdaterLauncher 실행 여부 확인
+        if (QFile::exists(launcherPath)) {
+            // 인자로 latestVersion을 전달하며 UpdaterLauncher 실행
+            bool result = QProcess::startDetached(launcherPath, QStringList() << latestVersion);
+            if (!result) {
+                qCritical() << "Failed to start UpdaterLauncher at:" << launcherPath;
+            } else {
+                qDebug() << "UpdaterLauncher started successfully with version:" << latestVersion;
+            }
         } else {
-            qDebug() << "UpdaterLauncher started successfully.";
+            qCritical() << "UpdaterLauncher not found at:" << launcherPath;
         }
 
         // 프로그램 종료
