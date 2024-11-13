@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include <QDebug>
 
-const QString CURRENT_VERSION = "v3.0.0";  // 현재 버전
+const QString CURRENT_VERSION = "v1.0.0";  // 현재 버전
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
