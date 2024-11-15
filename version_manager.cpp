@@ -1,16 +1,15 @@
 #include "version_manager.h"
 #include <QFileInfo>
-#include <QProcess>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QCoreApplication>
-#include <QEventLoop>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDebug>
-#include <QJsonArray>
 #include <QTimer>
 #include <QApplication>
+#include <QProcess>
 
 
 // 버전 비교 함수
@@ -31,20 +30,25 @@ int compareVersions(const QString &v1, const QString &v2) {
 }
 
 // 최신 버전 찾기 함수 (AWS API Gateway 사용)
-QString findLatestVersion() {
+QString getLatestVersionFromDynamoDB(const QString &programName) {
     QNetworkAccessManager manager;
 
-    // AWS API Gateway에서 최신 버전 정보를 가져오는 요청 설정
+    // AWS API Gateway URL 설정
     QNetworkRequest request(QUrl("https://9gis6w13h4.execute-api.ap-northeast-2.amazonaws.com/version/get_latest_version"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    QNetworkReply* reply = manager.get(request);
+    // 요청 본문 생성
+    QByteArray requestData = QString("{\"programName\": \"%1\"}").arg(programName).toUtf8();
 
+    // POST 요청
+    QNetworkReply* reply = manager.post(request, requestData);
+
+    // 이벤트 루프를 사용해 요청 완료 대기
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
 
-    QString latest_version;
+    QString latestVersion;
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
@@ -54,59 +58,60 @@ QString findLatestVersion() {
         if (!jsonDoc.isObject()) {
             qWarning() << "Failed to parse JSON response.";
             reply->deleteLater();
-            return latest_version;
+            return latestVersion;
         }
 
         QJsonObject jsonObj = jsonDoc.object();
-        latest_version = jsonObj["latest_version"].toString();  // "latest_version" 필드에서 버전 정보 추출
+
+        // 최상위 JSON 객체에서 version 필드 추출
+        latestVersion = jsonObj["version"].toString();  // "version" 필드에서 버전 정보 추출
+
     } else {
         qWarning() << "Failed to fetch updates:" << reply->errorString();
     }
 
     reply->deleteLater();
-    return latest_version;
+    return latestVersion;
 }
 
-// 버전 정보 업로드 함수 (AWS API Gateway 사용)
-void uploadVersionJson(const QString& current_version) {
-    QNetworkAccessManager* manager = new QNetworkAccessManager();
+void uploadVersionToDynamoDB(const QString &programName, const QString &version) {
+    // API URL 설정
+    QString url = "https://9gis6w13h4.execute-api.ap-northeast-2.amazonaws.com/version/add_or_update_version";
+    QNetworkRequest request((QUrl(url)));
 
-    // AWS API Gateway URL로 요청 설정
-    QUrl url("https://9gis6w13h4.execute-api.ap-northeast-2.amazonaws.com/version/add_or_update_version");
-    QNetworkRequest request(url);
-
-    // 요청 헤더 설정
+    // 헤더 설정
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // JSON 데이터 생성 (VersionID 포함)
-    QJsonObject newVersion;
-    newVersion["VersionID"] = current_version;
-    QJsonDocument requestDoc(newVersion);
-    QByteArray requestBody = requestDoc.toJson();
+    // 요청 데이터 생성
+    QJsonObject json;
+    json["programName"] = programName;
+    json["version"] = version;
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
 
-    // 이벤트 루프 설정
+    // 네트워크 매니저 설정 및 요청 전송
+    QNetworkAccessManager networkManager;
+    QNetworkReply *reply = networkManager.put(request, data);
+
+    // 응답을 대기하기 위한 이벤트 루프 설정
     QEventLoop loop;
-
-    // PUT 요청 전송
-    QNetworkReply* reply = manager->put(request, requestBody);
-
-    // 요청 완료 후 응답 처리
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    loop.exec();  // 네트워크 응답을 기다림
+    loop.exec();
 
-    // 요청 결과 확인
+    // 응답 결과 처리
     if (reply->error() == QNetworkReply::NoError) {
-        qDebug() << "Version uploaded successfully!";
+        QString response = reply->readAll();
+        qDebug() << "Update check successful:" << response;
     } else {
-        qCritical() << "Failed to upload version:" << reply->errorString();
-        qCritical() << "Response:" << reply->readAll();
+        qDebug() << "Update check failed:" << reply->errorString();
     }
 
+    // 리소스 해제
     reply->deleteLater();
 }
 
 // 버전 확인 및 UpdaterLauncher 런처 실행 함수 (Qt Creator 실행 감지 추가)
-void checkForUpdate(const QString &currentVersion) {
+void checkForUpdate(const QString &programName, const QString &currentVersion) {
     // 실행 경로에 특정 경로 패턴이 포함된 경우에만 uploadVersionJson 호출
     QFileInfo exeFileInfo(QCoreApplication::applicationFilePath());
     QString exePath = exeFileInfo.absolutePath();
@@ -114,10 +119,11 @@ void checkForUpdate(const QString &currentVersion) {
     // Qt Creator에서 실행하는지 특정 경로 패턴 확인
     if (exePath.contains("QtCreatorSource") || exePath.contains("build-")) {
         qDebug() << "Detected Qt Creator environment. Uploading version info.";
-        uploadVersionJson(currentVersion);
+        // 버전 업로드 함수 호출
+        uploadVersionToDynamoDB(programName, currentVersion);
     }
 
-    QString latestVersion = findLatestVersion();
+    QString latestVersion = getLatestVersionFromDynamoDB(programName);
     qDebug() << "Latest version: " << latestVersion;
     qDebug() << "Current Version: " << currentVersion;
 

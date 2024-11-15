@@ -17,6 +17,10 @@ void uploadVersionJson(const QString& current_version);
 
 // 버전 확인 및 UpdaterLauncher 실행 함수
 // 현재 버전을 입력받아 최신 버전과 비교하여, 새 버전이 있으면 UpdaterLauncher를 실행합니다.
-void checkForUpdate(const QString &currentVersion);
+void checkForUpdate(const QString &programName, const QString &currentVersion);
+
+// API 요청 함수 정의
+void uploadVersionToDynamoDB(const QString &programName, const QString &version);
+
 
 #endif // VERSION_MANAGER_H
