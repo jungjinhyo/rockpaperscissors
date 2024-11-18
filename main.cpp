@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include <QDebug>
 
-const QString CURRENT_VERSION = "v1.0.0";  // 현재 버전
+const QString CURRENT_VERSION = "v4.0.0";  // 현재 버전
 const QString PROGRAM_NAME = "rockpaperscissors"; // 프로그램 이름
 
 int main(int argc, char *argv[]) {
