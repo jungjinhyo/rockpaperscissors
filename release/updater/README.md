@@ -1,1 +1,1 @@
-UpdaterLauncher.exe, s3_downloader.py, DynamoDBModule.dll, aws_credentials.txt가 updater 디렉터리 안에 있어야 정상 동작합니다.
+UpdaterLauncher.exe, DynamoDBModule.dll, update_updaterlauncher.bat, UpdaterRenamer.exe가 updater 디렉터리 안에 있어야 정상 동작합니다.

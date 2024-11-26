@@ -1,83 +1,85 @@
 
-# Rock Paper Scissors Game with Auto-Updater
+# RockPaperScissors with Auto-Updater
 
-### Overview
+This is a Qt-based application for a Rock-Paper-Scissors game that includes an auto-update feature. The application checks for the latest version using AWS API Gateway and DynamoDB and launches an updater if a new version is available.
 
-이 프로젝트는 Qt로 개발된 간단한 가위바위보 게임으로, 자동 업데이트 기능을 포함하고 있습니다. `MainWindow` 클래스는 가위바위보 게임의 UI 및 기능을 제공하고, `version_manager` 모듈은 GitHub API를 통해 최신 버전을 확인하고 업데이트 런처를 실행하는 기능을 수행합니다.
+Final document update date : 2024.11.26
 
----
+## Features
 
-## Requirements
+### Game Features
+- Play Rock-Paper-Scissors with a computer opponent.
+- Simple UI for user interaction.
 
-- **Qt 5 또는 6** (필요 모듈: `QtCore`, `QtGui`, `QtWidgets`, `QtNetwork`, `QtJson`)
-- **GitHub Personal Access Token** (자동 버전 업로드 시 필요)
-- Windows OS 호환
-
----
+### Update Features
+- **Version Comparison**: Compares the current version with the latest version.
+- **Version Management**: Uploads and retrieves version information from DynamoDB using AWS API Gateway.
+- **Auto-Updater**: Automatically launches an updater to download and install the latest version.
 
 ## Project Structure
 
-- **main.cpp**: 프로그램의 진입점으로, 현재 버전을 설정하고 업데이트를 확인한 후 최신 버전일 경우 게임을 실행합니다.
-- **mainwindow.h / mainwindow.cpp**: `MainWindow` 클래스는 가위바위보 게임의 UI와 게임 로직을 구현합니다.
-- **version_manager.h / version_manager.cpp**: GitHub API와 상호작용하여 버전을 비교하고, 새로운 버전이 있을 경우 업데이트 런처를 실행합니다.
+### Key Files and Classes
+1. **`main.cpp`**
+   - Entry point of the application.
+   - Checks for updates before launching the game.
 
----
+2. **`MainWindow`**
+   - Manages the game UI and gameplay logic.
+   - Handles user interactions like choosing Rock, Paper, or Scissors.
 
-## How to Build
+3. **`version_manager.h`**
+   - Provides functions to compare versions, retrieve the latest version, and upload version information to DynamoDB.
 
-1. **Qt 설치**: 최신 Qt 버전을 설치합니다.
-2. **저장소 클론**:
-   ```bash
-   git clone https://github.com/username/rock-paper-scissors-auto-updater.git
-   ```
-3. **Qt Creator에서 열기**:
-   - **Qt Creator**에서 `rock-paper-scissors-auto-updater.pro` 파일을 엽니다.
-4. **빌드 및 실행**:
-   - 배포용 **Release** 구성 또는 테스트용 **Debug** 구성을 사용하여 빌드합니다.
-   - **Qt Creator**에서 프로젝트를 실행할 수 있습니다.
+### Components
+- **Game Logic**:
+  - `computerChoice()`: Generates the computer's move randomly.
+  - `determineWinner()`: Determines the winner based on the player's and computer's moves.
 
----
+- **Version Management**:
+  - `compareVersions()`: Compares two version strings to determine which is newer.
+  - `getLatestVersionFromDynamoDB()`: Retrieves the latest version of the program from DynamoDB via API Gateway.
+  - `uploadVersionToDynamoDB()`: Uploads the current version information to DynamoDB.
+
+- **Auto-Updater**:
+  - Checks if a new version is available.
+  - Launches `UpdaterLauncher.exe` to handle the update process.
+
+## API Endpoints
+- **Get All Latest Versions**:
+  - URL: `https://0b3xq5xnkd.execute-api.ap-northeast-2.amazonaws.com/version/getAllLatestVersions`
+  - Retrieves the latest version for all programs.
+- **Add or Update Version**:
+  - URL: `https://0b3xq5xnkd.execute-api.ap-northeast-2.amazonaws.com/version/AddOrUpdateVersion`
+  - Updates the version information for a specific program.
 
 ## Usage
 
-### 애플리케이션 실행
+### Prerequisites
+- Qt 5 or higher installed.
+- AWS services (API Gateway and DynamoDB) configured for version management.
 
-애플리케이션을 실행하면, 현재 버전과 GitHub에 저장된 최신 버전을 비교하여 최신 버전일 경우 게임이 실행되고, 그렇지 않을 경우 업데이트 런처가 실행됩니다.
+### Running the Application
+1. Compile the project using Qt Creator.
+2. Run the application. It will:
+   - Check for updates.
+   - Launch the game if no update is required.
 
-1. **가위바위보 게임**: 사용자가 가위, 바위, 보 버튼 중 하나를 클릭하면 컴퓨터의 선택과 결과가 표시됩니다.
-2. **업데이트 확인**: `version_manager` 모듈이 GitHub API를 통해 `version.json` 파일의 최신 버전을 확인하고, 새로운 버전이 있는 경우 `UpdaterLauncher`를 실행하여 업데이트합니다.
+### Playing the Game
+- Choose your move (Rock, Paper, or Scissors) using the buttons.
+- See the computer's choice and the result on the screen.
+- Click "Play Again" to restart the game.
 
-### 주요 함수
+### Auto-Updater
+- If a new version is available:
+  - The application launches `UpdaterLauncher.exe` with the new version details.
+  - The game exits automatically, and the updater handles the update process.
 
-- **checkForUpdate()**: GitHub에서 최신 버전을 확인하고 업데이트가 필요할 경우 런처를 실행합니다.
-- **compareVersions()**: 현재 버전과 최신 버전을 비교하여 업데이트 여부를 판단합니다.
-- **uploadVersionJson()**: GitHub에 새로운 버전을 업로드합니다.
+## Customization
+- Modify `CURRENT_VERSION` and `PROGRAM_NAME` in `main.cpp` to set the current program version and name.
+- Update API URLs (`getAllLatestVersionsAPI` and `add_or_update_versionAPI`) if the endpoints change.
 
-### 예제
-
-1. 현재 버전: `v1.2.0`
-2. 최신 버전: `v1.3.0`
-
-최신 버전이 존재할 경우, `UpdaterLauncher.exe`가 실행되어 새로운 버전으로 업데이트됩니다.
-
----
-
-## Known Issues
-
-- **GitHub API Rate Limit**: GitHub API 사용 시 비공개 리포지토리 접근을 위해 Personal Access Token이 필요하며, Rate Limit을 초과할 수 있습니다.
-- **UpdaterLauncher 실행 실패**: `UpdaterLauncher` 경로가 잘못되었거나 파일이 존재하지 않을 경우 업데이트가 실행되지 않습니다.
-
----
+## Contribution
+Feel free to contribute by opening issues or submitting pull requests for new features or bug fixes.
 
 ## License
-
-이 프로젝트는 RGBLAB 라이선스 하에 제공됩니다.
-
----
-
-### Author
-
-개발자: Jung jinhyo
-
---- 
-
+This project is licensed under the MIT License. See `LICENSE` for details.
